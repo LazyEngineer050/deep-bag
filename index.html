@@ -469,14 +469,32 @@ function rankPlayers(raw) {
     const pool    = raw.filter(p => p.hasStats).map(p => ({ ...p }));
     const noStats = raw.filter(p => !p.hasStats).map(p => ({ ...p, totalZ: null, totalProdZ: null }));
 
+    // ── FG%/FT% impact: (player% − leagueAvg%) × makes/game ──
+    // Falls back to raw % if volume data (fgm/ftm) is unavailable.
+    const fgPctVals = pool.map(p => p.fg_pct).filter(v => v != null);
+    const ftPctVals = pool.map(p => p.ft_pct).filter(v => v != null);
+    const lgFgPct   = fgPctVals.length ? fgPctVals.reduce((a, b) => a + b, 0) / fgPctVals.length : 0;
+    const lgFtPct   = ftPctVals.length ? ftPctVals.reduce((a, b) => a + b, 0) / ftPctVals.length : 0;
+    pool.forEach(p => {
+        p.fg_impact = (p.fg_pct != null && p.fgm != null) ? (p.fg_pct - lgFgPct) * p.fgm : p.fg_pct;
+        p.ft_impact = (p.ft_pct != null && p.ftm != null) ? (p.ft_pct - lgFtPct) * p.ftm : p.ft_pct;
+    });
+
+    // Returns the value to use for Z-scoring: impact for pct cats, raw for others
+    function statVal(p, cat) {
+        if (cat.key === 'fg_pct') return p.fg_impact;
+        if (cat.key === 'ft_pct') return p.ft_impact;
+        return p[cat.key];
+    }
+
     // ── Per-game Z-scores ──────────────────────────────────────
     CATS.forEach(cat => {
-        const vals = pool.map(p => p[cat.key]).filter(v => v != null && !isNaN(v));
+        const vals = pool.map(p => statVal(p, cat)).filter(v => v != null && !isNaN(v));
         if (!vals.length) return;
         const mean   = vals.reduce((a, b) => a + b, 0) / vals.length;
         const stdDev = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length);
         pool.forEach(p => {
-            const v = p[cat.key];
+            const v = statVal(p, cat);
             const z = (v != null && stdDev > 0) ? (v - mean) / stdDev : 0;
             p['z_' + cat.key] = cat.good ? z : -z;
         });
@@ -488,18 +506,19 @@ function rankPlayers(raw) {
     // ── Total production Z-scores (counting cats × GP) ────────
     CATS.forEach(cat => {
         if (!cat.counting) {
-            // Rate stats: total prod Z = per-game Z (unchanged)
+            // Impact stats: total prod Z = per-game Z (unchanged)
             pool.forEach(p => { p['tz_' + cat.key] = p['z_' + cat.key]; });
             return;
         }
         const vals = pool
-            .map(p => (p[cat.key] != null && p.gp) ? p[cat.key] * p.gp : null)
+            .map(p => (statVal(p, cat) != null && p.gp) ? statVal(p, cat) * p.gp : null)
             .filter(v => v != null);
         if (!vals.length) return;
         const mean   = vals.reduce((a, b) => a + b, 0) / vals.length;
         const stdDev = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length);
         pool.forEach(p => {
-            const total = (p[cat.key] != null && p.gp) ? p[cat.key] * p.gp : null;
+            const sv    = statVal(p, cat);
+            const total = (sv != null && p.gp) ? sv * p.gp : null;
             const z     = (total != null && stdDev > 0) ? (total - mean) / stdDev : 0;
             p['tz_' + cat.key] = cat.good ? z : -z;
         });
@@ -518,12 +537,12 @@ function rankPlayers(raw) {
 
     CATS.forEach(cat => {
         Object.values(posGroups).forEach(group => {
-            const vals = group.map(p => p[cat.key]).filter(v => v != null && !isNaN(v));
+            const vals = group.map(p => statVal(p, cat)).filter(v => v != null && !isNaN(v));
             if (vals.length < 2) return;
             const mean   = vals.reduce((a, b) => a + b, 0) / vals.length;
             const stdDev = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length);
             group.forEach(p => {
-                const v = p[cat.key];
+                const v = statVal(p, cat);
                 const z = (v != null && stdDev > 0) ? (v - mean) / stdDev : 0;
                 p['pz_' + cat.key] = cat.good ? z : -z;
             });
