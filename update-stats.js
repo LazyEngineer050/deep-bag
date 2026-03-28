@@ -59,7 +59,7 @@ async function fetchTeamIds() {
     log('Fetching team list...');
     const data = await get(
         'sports.core.api.espn.com',
-        '/v2/sports/basketball/leagues/nba/seasons/2025/teams?limit=50'
+        '/v2/sports/basketball/leagues/nba/seasons/2026/teams?limit=50'
     );
     // each item is { $ref: "http://...teams/1?..." }
     return data.items.map(item => {
@@ -90,7 +90,7 @@ async function fetchAthleteVolume(id) {
     try {
         const data = await get(
             'sports.core.api.espn.com',
-            `/v2/sports/basketball/leagues/nba/seasons/2025/types/2/athletes/${id}/statistics/0`
+            `/v2/sports/basketball/leagues/nba/seasons/2026/types/2/athletes/${id}/statistics/0`
         );
         let fgm = null, ftm = null;
         for (const cat of data.splits?.categories ?? []) {
@@ -111,7 +111,7 @@ async function fetchStats() {
     log('Fetching league stats...');
     const data = await get(
         'sports.core.api.espn.com',
-        '/v2/sports/basketball/leagues/nba/seasons/2025/types/2/leaders?limit=500'
+        '/v2/sports/basketball/leagues/nba/seasons/2026/types/2/leaders?limit=500'
     );
 
     // Map ESPN category names → our internal keys
