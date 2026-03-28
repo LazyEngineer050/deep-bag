@@ -139,6 +139,37 @@
             color: var(--text-dim);
         }
 
+        /* ── Category filter pills ── */
+        .cat-filter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+        .cat-filter label {
+            font-size: 0.78rem;
+            color: var(--text-dim);
+            margin-right: 4px;
+            white-space: nowrap;
+        }
+        .cat-pill {
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text-dim);
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+            user-select: none;
+        }
+        .cat-pill:hover { border-color: var(--accent); color: var(--text); }
+        .cat-pill.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
         .heatmap-btn {
             padding: 6px 14px;
             border-radius: 6px;
@@ -420,6 +451,19 @@
         <span class="count-label" id="countLabel"></span>
     </div>
 
+    <div class="cat-filter">
+        <label>Categories:</label>
+        <span class="cat-pill active" id="cat_pts"      onclick="toggleCat('pts')">PTS</span>
+        <span class="cat-pill active" id="cat_reb"      onclick="toggleCat('reb')">REB</span>
+        <span class="cat-pill active" id="cat_ast"      onclick="toggleCat('ast')">AST</span>
+        <span class="cat-pill active" id="cat_stl"      onclick="toggleCat('stl')">STL</span>
+        <span class="cat-pill active" id="cat_blk"      onclick="toggleCat('blk')">BLK</span>
+        <span class="cat-pill active" id="cat_fg3m"     onclick="toggleCat('fg3m')">3PM</span>
+        <span class="cat-pill active" id="cat_fg_pct"   onclick="toggleCat('fg_pct')">FG%</span>
+        <span class="cat-pill active" id="cat_ft_pct"   onclick="toggleCat('ft_pct')">FT%</span>
+        <span class="cat-pill active" id="cat_turnover" onclick="toggleCat('turnover')">TO</span>
+    </div>
+
     <div class="table-wrap">
         <div id="content">
             <div class="loading-area">
@@ -462,6 +506,8 @@ let ageFactor      = 0.045;  // Age Weight slider  (0–10 → 0–0.15)
 let availWeight    = 0;      // Production slider  (0–10 → 0–1.0)
 let scarcityWeight = 0;      // Scarcity slider    (0–10 → 0–1.0)
 let heatmap        = false;
+let enabledCats    = new Set(CATS.map(c => c.key));
+let rawData        = null;
 const PEAK_AGE     = 27;
 
 // ═══════════════════════════════════════════════════════════════
@@ -503,8 +549,10 @@ function rankPlayers(raw) {
         return p[cat.key];
     }
 
+    const activeCats = CATS.filter(c => enabledCats.has(c.key));
+
     // ── Per-game Z-scores ──────────────────────────────────────
-    CATS.forEach(cat => {
+    activeCats.forEach(cat => {
         const vals = pool.map(p => statVal(p, cat)).filter(v => v != null && !isNaN(v));
         if (!vals.length) return;
         const mean   = vals.reduce((a, b) => a + b, 0) / vals.length;
@@ -516,11 +564,11 @@ function rankPlayers(raw) {
         });
     });
     pool.forEach(p => {
-        p.totalZ = CATS.reduce((sum, cat) => sum + (p['z_' + cat.key] ?? 0), 0);
+        p.totalZ = activeCats.reduce((sum, cat) => sum + (p['z_' + cat.key] ?? 0), 0);
     });
 
     // ── Total production Z-scores (counting cats × GP) ────────
-    CATS.forEach(cat => {
+    activeCats.forEach(cat => {
         if (!cat.counting) {
             // Impact stats: total prod Z = per-game Z (unchanged)
             pool.forEach(p => { p['tz_' + cat.key] = p['z_' + cat.key]; });
@@ -540,7 +588,7 @@ function rankPlayers(raw) {
         });
     });
     pool.forEach(p => {
-        p.totalProdZ = CATS.reduce((sum, cat) => sum + (p['tz_' + cat.key] ?? 0), 0);
+        p.totalProdZ = activeCats.reduce((sum, cat) => sum + (p['tz_' + cat.key] ?? 0), 0);
     });
 
     // ── Position-relative Z-scores (G / F / C groups) ────────
@@ -551,7 +599,7 @@ function rankPlayers(raw) {
         posGroups[g].push(p);
     });
 
-    CATS.forEach(cat => {
+    activeCats.forEach(cat => {
         Object.values(posGroups).forEach(group => {
             const vals = group.map(p => statVal(p, cat)).filter(v => v != null && !isNaN(v));
             if (vals.length < 2) return;
@@ -565,7 +613,7 @@ function rankPlayers(raw) {
         });
     });
     pool.forEach(p => {
-        p.posZ = CATS.reduce((sum, cat) => sum + (p['pz_' + cat.key] ?? 0), 0);
+        p.posZ = activeCats.reduce((sum, cat) => sum + (p['pz_' + cat.key] ?? 0), 0);
     });
 
     pool.sort((a, b) => b.totalZ - a.totalZ);
@@ -704,6 +752,17 @@ function toggleHeatmap() {
     renderTable(filtered);
 }
 
+function toggleCat(key) {
+    if (enabledCats.has(key)) {
+        if (enabledCats.size === 1) return; // keep at least one
+        enabledCats.delete(key);
+    } else {
+        enabledCats.add(key);
+    }
+    document.getElementById('cat_' + key).classList.toggle('active', enabledCats.has(key));
+    rerank();
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  SAMPLE DATA  (shown when data.js hasn't been generated yet)
 // ═══════════════════════════════════════════════════════════════
@@ -730,14 +789,19 @@ function getSampleData() {
 // ═══════════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════════
+function rerank() {
+    allRanked = rankPlayers(rawData);
+    applyFilters();
+}
+
 function init() {
     // window.PLAYER_DATA is set by data.js (generated by update-stats.js)
     const raw = window.PLAYER_DATA || null;
+    rawData = raw || getSampleData();
 
     if (!raw) {
         // No data.js yet — show sample data with a notice
         document.getElementById('notice').style.display = 'block';
-        allRanked = rankPlayers(getSampleData());
     } else {
         // Live data loaded — show timestamp if available
         if (window.DATA_TIMESTAMP) {
@@ -745,8 +809,8 @@ function init() {
                 'Data: ' + new Date(window.DATA_TIMESTAMP).toLocaleDateString(
                     'en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         }
-        allRanked = rankPlayers(raw);
     }
+    allRanked = rankPlayers(rawData);
 
     document.getElementById('content').innerHTML = ''; // clear spinner
     applyFilters();
