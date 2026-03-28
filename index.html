@@ -3,7 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deep Bag | NBA Dynasty Rankings</title>
+    <title>The Deep Bag | NBA Dynasty Fantasy Rankings</title>
+
+    <!-- SEO -->
+    <meta name="description" content="Free NBA dynasty fantasy basketball rankings. Players ranked by Z-score across all 9 standard categories with adjustable age weighting, positional scarcity, and availability scoring.">
+    <meta name="keywords" content="NBA dynasty rankings, dynasty fantasy basketball, NBA fantasy rankings, dynasty basketball player rankings, NBA Z-score rankings, fantasy basketball dynasty value">
+    <meta name="author" content="The Deep Bag">
+    <link rel="canonical" href="https://www.thedeepbag.com/">
+
+    <!-- Open Graph (controls how the link looks when shared on social media) -->
+    <meta property="og:title" content="The Deep Bag | NBA Dynasty Fantasy Rankings">
+    <meta property="og:description" content="Free NBA dynasty fantasy rankings with age weighting, positional scarcity, and availability scoring. Updated daily.">
+    <meta property="og:url" content="https://www.thedeepbag.com/">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="The Deep Bag | NBA Dynasty Fantasy Rankings">
+    <meta name="twitter:description" content="Free NBA dynasty fantasy rankings with age weighting, positional scarcity, and availability scoring. Updated daily.">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -134,6 +151,15 @@
         }
 
         .refresh-btn:hover { background: rgba(249,115,22,0.22); }
+
+        /* ── Site description (SEO) ── */
+        .site-description {
+            font-size: 0.82rem;
+            color: var(--text-dim);
+            margin-bottom: 14px;
+            line-height: 1.6;
+            max-width: 800px;
+        }
 
         /* ── Age weight slider ── */
         .slider-group {
@@ -337,6 +363,10 @@
 </header>
 
 <main>
+    <div class="site-description">
+        Free NBA dynasty fantasy basketball rankings updated daily. Players ranked by Z-score across all 9 standard categories — points, rebounds, assists, steals, blocks, 3-pointers, FG%, FT%, and turnovers. Adjust the sliders to weight rankings by age, total production, and positional scarcity.
+    </div>
+
     <div class="notice" id="notice">
         ℹ️ Showing sample data. To load live stats, open a terminal in
         <code>C:\Users\User\deep-bag\</code> and run: <code>node update-stats.js</code>
