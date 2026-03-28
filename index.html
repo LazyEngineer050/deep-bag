@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Bag | NBA Dynasty Rankings</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0d0d14;
+            --surface: #1a1a2e;
+            --surface2: #16213e;
+            --border: #2a2a4a;
+            --accent: #f97316;
+            --accent-dim: rgba(249, 115, 22, 0.12);
+            --text: #e2e8f0;
+            --text-dim: #94a3b8;
+            --green: #22c55e;
+            --red: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            height: 60px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .logo span { color: var(--accent); }
+
+        .logo-sub {
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            margin-left: 12px;
+            font-weight: 400;
+            letter-spacing: 0.03em;
+        }
+
+        .header-right {
+            margin-left: auto;
+            font-size: 0.78rem;
+            color: var(--text-dim);
+        }
+
+        /* ── Main ── */
+        main {
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 20px 16px 40px;
+        }
+
+        /* ── Notice Banner ── */
+        .notice {
+            background: var(--accent-dim);
+            border: 1px solid rgba(249,115,22,0.4);
+            border-radius: 8px;
+            padding: 11px 16px;
+            margin-bottom: 16px;
+            font-size: 0.84rem;
+            color: var(--text);
+            display: none;
+        }
+
+        .notice a { color: var(--accent); text-decoration: none; }
+        .notice a:hover { text-decoration: underline; }
+
+        .notice code {
+            background: rgba(255,255,255,0.08);
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 0.82rem;
+        }
+
+        /* ── Controls ── */
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        input[type="text"], select {
+            padding: 7px 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            color: var(--text);
+            font-size: 0.84rem;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        input[type="text"] { min-width: 200px; }
+        input[type="text"]::placeholder { color: var(--text-dim); }
+        input[type="text"]:focus, select:focus { border-color: var(--accent); }
+        select { cursor: pointer; }
+
+        .count-label {
+            margin-left: auto;
+            font-size: 0.78rem;
+            color: var(--text-dim);
+        }
+
+        .refresh-btn {
+            padding: 7px 14px;
+            background: var(--accent-dim);
+            border: 1px solid rgba(249,115,22,0.3);
+            border-radius: 7px;
+            color: var(--accent);
+            font-size: 0.84rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .refresh-btn:hover { background: rgba(249,115,22,0.22); }
+
+        /* ── Age weight slider ── */
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 5px 12px;
+            font-size: 0.84rem;
+        }
+
+        .slider-group label { color: var(--text-dim); white-space: nowrap; }
+
+        .slider-track {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .slider-ends {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.68rem;
+            color: var(--text-dim);
+            padding: 0 1px;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 140px;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+        }
+
+        .dynasty-col { color: #a78bfa; }
+        .dynasty-col.z-pos { color: #a78bfa; }
+        .dynasty-col.z-neg { color: #f87171; }
+
+        /* ── Table Container ── */
+        .table-wrap {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .table-scroll { overflow-x: auto; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.84rem;
+        }
+
+        thead th {
+            background: var(--surface2);
+            padding: 10px 9px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            border-bottom: 1px solid var(--border);
+            text-align: right;
+            transition: color 0.15s;
+        }
+
+        thead th:first-child, thead th:nth-child(2), thead th:nth-child(3) {
+            text-align: left;
+        }
+
+        thead th:hover { color: var(--text); }
+        thead th.sorted { color: var(--accent); }
+
+        .sort-arrow { margin-left: 3px; opacity: 0; }
+        .sorted .sort-arrow { opacity: 1; }
+
+        tbody tr {
+            border-bottom: 1px solid rgba(42,42,74,0.6);
+            transition: background 0.1s;
+        }
+
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: rgba(255,255,255,0.025); }
+
+        td {
+            padding: 9px 9px;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        td:first-child {
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 0.75rem;
+            width: 36px;
+            min-width: 36px;
+        }
+
+        td:nth-child(2) {
+            text-align: left;
+            font-weight: 600;
+            min-width: 160px;
+        }
+
+        td:nth-child(3) {
+            text-align: left;
+            color: var(--text-dim);
+            font-size: 0.78rem;
+            min-width: 50px;
+        }
+
+        .rank-gold   { color: #f59e0b; font-weight: 700; }
+        .rank-silver { color: #94a3b8; font-weight: 700; }
+        .rank-bronze { color: #cd7f32; font-weight: 700; }
+
+        .z-total { font-weight: 700; }
+        .z-pos { color: var(--green); }
+        .z-neg { color: var(--red); }
+
+        /* ── Loading ── */
+        .loading-area {
+            text-align: center;
+            padding: 80px 20px;
+        }
+
+        .spinner {
+            width: 38px;
+            height: 38px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-title { font-size: 0.95rem; margin-bottom: 6px; }
+        .loading-sub { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 14px; }
+
+        .progress-track {
+            width: 220px;
+            height: 3px;
+            background: var(--border);
+            border-radius: 2px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            transition: width 0.4s ease;
+            width: 0%;
+        }
+
+        /* ── Error ── */
+        .error-area {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .error-area p:first-child { color: var(--red); font-weight: 600; margin-bottom: 8px; }
+        .error-area p { font-size: 0.85rem; color: var(--text-dim); }
+
+        /* ── Footer ── */
+        footer {
+            text-align: center;
+            padding: 28px 16px;
+            color: var(--text-dim);
+            font-size: 0.78rem;
+        }
+
+        footer a { color: var(--text-dim); }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">Deep <span>Bag</span><span class="logo-sub">NBA Dynasty Rankings</span></div>
+    <div class="header-right" id="lastUpdated"></div>
+</header>
+
+<main>
+    <div class="notice" id="notice">
+        ℹ️ Showing sample data. To load live stats, open a terminal in
+        <code>C:\Users\User\deep-bag\</code> and run: <code>node update-stats.js</code>
+        — then refresh this page.
+    </div>
+
+    <div class="controls">
+        <input type="text" id="searchInput" placeholder="Search player…">
+        <select id="limitFilter">
+            <option value="100">Top 100</option>
+            <option value="250">Top 250</option>
+            <option value="500" selected>Top 500</option>
+            <option value="9999">All</option>
+        </select>
+        <div class="slider-group">
+            <label>Age Weight</label>
+            <div class="slider-track">
+                <input type="range" id="ageWeight" min="0" max="10" value="3" step="1">
+                <div class="slider-ends"><span>Current</span><span>Dynasty</span></div>
+            </div>
+        </div>
+        <div class="slider-group">
+            <label>Availability</label>
+            <div class="slider-track">
+                <input type="range" id="availWeight" min="0" max="10" value="0" step="1">
+                <div class="slider-ends"><span>Per Game</span><span>TTL Production</span></div>
+            </div>
+        </div>
+        <span class="count-label" id="countLabel"></span>
+    </div>
+
+    <div class="table-wrap">
+        <div id="content">
+            <div class="loading-area">
+                <div class="spinner"></div>
+                <div class="loading-title" id="loadTitle">Loading NBA stats…</div>
+                <div class="loading-sub" id="loadSub">Connecting to balldontlie.io</div>
+                <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer>
+    Deep Bag &copy; 2025 &mdash; NBA Dynasty League Rankings &mdash; Data: ESPN
+</footer>
+
+<!-- data.js is generated by: node update-stats.js -->
+<script src="data.js"></script>
+<script>
+// ── The 9 standard fantasy categories ──────────────────────────
+const CATS = [
+    { key: 'pts',      label: 'PTS', good: true,  dec: 1,          counting: true,  title: 'Points per game' },
+    { key: 'reb',      label: 'REB', good: true,  dec: 1,          counting: true,  title: 'Rebounds per game' },
+    { key: 'ast',      label: 'AST', good: true,  dec: 1,          counting: true,  title: 'Assists per game' },
+    { key: 'stl',      label: 'STL', good: true,  dec: 2,          counting: true,  title: 'Steals per game' },
+    { key: 'blk',      label: 'BLK', good: true,  dec: 2,          counting: true,  title: 'Blocks per game' },
+    { key: 'fg3m',     label: '3PM', good: true,  dec: 1,          counting: true,  title: '3-pointers made per game' },
+    { key: 'fg_pct',   label: 'FG%', good: true,  dec: 1, pct: true, counting: false, title: 'Field goal %' },
+    { key: 'ft_pct',   label: 'FT%', good: true,  dec: 1, pct: true, counting: false, title: 'Free throw %' },
+    { key: 'turnover', label: 'TO',  good: false, dec: 1,          counting: true,  title: 'Turnovers (lower = better)' },
+];
+
+// ── State ───────────────────────────────────────────────────────
+let allRanked    = [];
+let filtered     = [];
+let sortKey      = 'dynastyZ';
+let sortAsc      = false;
+let displayLimit = 500;
+let ageFactor    = 0.045;  // Age Weight slider  (0–10 → 0–0.15)
+let availWeight  = 0;      // Production slider  (0–10 → 0–1.0)
+const PEAK_AGE   = 27;
+
+// ═══════════════════════════════════════════════════════════════
+//  Z-SCORE ENGINE
+// ═══════════════════════════════════════════════════════════════
+function zScores(pool, valFn, cat) {
+    const vals = pool.map(valFn).filter(v => v != null && !isNaN(v));
+    if (!vals.length) return;
+    const mean   = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const stdDev = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length);
+    pool.forEach(p => {
+        const v = valFn(p);
+        const z = (v != null && stdDev > 0) ? (v - mean) / stdDev : 0;
+        return z;  // caller assigns
+        void z;
+    });
+    return { mean, stdDev };
+}
+
+function rankPlayers(raw) {
+    const pool    = raw.filter(p => p.hasStats).map(p => ({ ...p }));
+    const noStats = raw.filter(p => !p.hasStats).map(p => ({ ...p, totalZ: null, totalProdZ: null }));
+
+    // ── Per-game Z-scores ──────────────────────────────────────
+    CATS.forEach(cat => {
+        const vals = pool.map(p => p[cat.key]).filter(v => v != null && !isNaN(v));
+        if (!vals.length) return;
+        const mean   = vals.reduce((a, b) => a + b, 0) / vals.length;
+        const stdDev = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length);
+        pool.forEach(p => {
+            const v = p[cat.key];
+            const z = (v != null && stdDev > 0) ? (v - mean) / stdDev : 0;
+            p['z_' + cat.key] = cat.good ? z : -z;
+        });
+    });
+    pool.forEach(p => {
+        p.totalZ = CATS.reduce((sum, cat) => sum + (p['z_' + cat.key] ?? 0), 0);
+    });
+
+    // ── Total production Z-scores (counting cats × GP) ────────
+    CATS.forEach(cat => {
+        if (!cat.counting) {
+            // Rate stats: total prod Z = per-game Z (unchanged)
+            pool.forEach(p => { p['tz_' + cat.key] = p['z_' + cat.key]; });
+            return;
+        }
+        const vals = pool
+            .map(p => (p[cat.key] != null && p.gp) ? p[cat.key] * p.gp : null)
+            .filter(v => v != null);
+        if (!vals.length) return;
+        const mean   = vals.reduce((a, b) => a + b, 0) / vals.length;
+        const stdDev = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length);
+        pool.forEach(p => {
+            const total = (p[cat.key] != null && p.gp) ? p[cat.key] * p.gp : null;
+            const z     = (total != null && stdDev > 0) ? (total - mean) / stdDev : 0;
+            p['tz_' + cat.key] = cat.good ? z : -z;
+        });
+    });
+    pool.forEach(p => {
+        p.totalProdZ = CATS.reduce((sum, cat) => sum + (p['tz_' + cat.key] ?? 0), 0);
+    });
+
+    pool.sort((a, b) => b.totalZ - a.totalZ);
+    noStats.sort((a, b) => a.name.localeCompare(b.name));
+    return [...pool, ...noStats];
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RENDERING
+// ═══════════════════════════════════════════════════════════════
+function fmtStat(v, cat) {
+    if (v == null || isNaN(v)) return '—';
+    return cat.pct ? (v * 100).toFixed(cat.dec) + '%' : v.toFixed(cat.dec);
+}
+
+function fmtZ(v) {
+    if (v == null || isNaN(v)) return '<span style="color:var(--text-dim)">—</span>';
+    return (v >= 0 ? '+' : '') + v.toFixed(2);
+}
+
+function renderTable(players) {
+    const content = document.getElementById('content');
+    if (!players.length) {
+        content.innerHTML = '<div class="loading-area"><p>No players match your search.</p></div>';
+        return;
+    }
+
+    const cols = [
+        { label: '#',       sortK: 'rank',   title: 'Rank' },
+        { label: 'Player',  sortK: 'name',   title: 'Player name' },
+        { label: 'Pos',     sortK: 'pos',    title: 'Position' },
+        { label: 'Age',     sortK: 'age',    title: 'Age' },
+        { label: 'Team',    sortK: 'team',   title: 'Team' },
+        { label: 'GP',      sortK: 'gp',     title: 'Games played' },
+        { label: 'MIN',     sortK: 'min',    title: 'Minutes per game' },
+        ...CATS.map(c => ({ label: c.label, sortK: c.key, title: c.title })),
+        { label: 'Z-Score',  sortK: 'totalZ',   title: 'Total Z-Score — current season production' },
+        { label: 'Dynasty Z', sortK: 'dynastyZ', title: 'Age-weighted Z-Score — dynasty value' },
+    ];
+
+    const arrow = sortAsc ? '↑' : '↓';
+    const thead = '<thead><tr>' + cols.map(c => {
+        const sorted = sortKey === c.sortK;
+        return `<th class="${sorted ? 'sorted' : ''}" title="${c.title}" onclick="handleSort('${c.sortK}')">
+            ${c.label}<span class="sort-arrow">${sorted ? arrow : ''}</span>
+        </th>`;
+    }).join('') + '</tr></thead>';
+
+    const slice = players.slice(0, displayLimit);
+    const tbody = '<tbody>' + slice.map((p, i) => {
+        const rank = i + 1;
+        const rc   = rank === 1 ? 'rank-gold' : rank === 2 ? 'rank-silver' : rank === 3 ? 'rank-bronze' : '';
+        const zc   = p.totalZ >= 0 ? 'z-pos' : 'z-neg';
+        return `<tr>
+            <td class="${rc}">${rank}</td>
+            <td>${p.name}</td>
+            <td>${p.pos ?? '—'}</td>
+            <td>${p.age != null ? p.age.toFixed(1) : '—'}</td>
+            <td>${p.team}</td>
+            <td>${p.gp  ?? '—'}</td>
+            <td>${p.min != null ? p.min.toFixed(1) : '—'}</td>
+            ${CATS.map(cat => `<td>${fmtStat(p[cat.key], cat)}</td>`).join('')}
+            <td class="z-total ${zc}">${fmtZ(p.totalZ)}</td>
+            <td class="z-total dynasty-col ${p.dynastyZ >= 0 ? 'z-pos' : 'z-neg'}">${fmtZ(p.dynastyZ)}</td>
+        </tr>`;
+    }).join('') + '</tbody>';
+
+    content.innerHTML = `<div class="table-scroll"><table>${thead}${tbody}</table></div>`;
+    document.getElementById('countLabel').textContent =
+        `${slice.length.toLocaleString()} of ${allRanked.length.toLocaleString()} players`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FILTERING & SORTING
+// ═══════════════════════════════════════════════════════════════
+function calcDynastyZ(p) {
+    if (p.totalZ == null) return null;
+
+    // Step 1 — blend per-game and total production
+    const baseZ = (availWeight === 0 || p.totalProdZ == null)
+        ? p.totalZ
+        : (1 - availWeight) * p.totalZ + availWeight * p.totalProdZ;
+
+    // Step 2 — apply age multiplier
+    if (p.age == null) return baseZ;
+    const multiplier = Math.max(0.3, Math.min(2.5, 1 + ageFactor * (PEAK_AGE - p.age)));
+    return baseZ * multiplier;
+}
+
+function applyFilters() {
+    const q = document.getElementById('searchInput').value.toLowerCase().trim();
+    filtered = q ? allRanked.filter(p => p.name.toLowerCase().includes(q)) : [...allRanked];
+
+    // Recalculate dynasty Z with current slider value
+    filtered.forEach(p => { p.dynastyZ = calcDynastyZ(p); });
+
+    filtered.sort((a, b) => {
+        let av = a[sortKey], bv = b[sortKey];
+        if (av == null) av = sortAsc ? Infinity  : -Infinity;
+        if (bv == null) bv = sortAsc ? Infinity  : -Infinity;
+        if (typeof av === 'string') return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+        return sortAsc ? av - bv : bv - av;
+    });
+
+    renderTable(filtered);
+}
+
+function handleSort(key) {
+    sortAsc = sortKey === key ? !sortAsc : false;
+    sortKey = key;
+    applyFilters();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SAMPLE DATA  (shown when data.js hasn't been generated yet)
+// ═══════════════════════════════════════════════════════════════
+function getSampleData() {
+    return [
+        { id:'1',  name:'Nikola Jokic',            pos:'C',  age:29, team:'DEN', pts:29.6, reb:13.0, ast:10.2, stl:1.4, blk:0.9, fg3m:1.5, fg_pct:0.574, ft_pct:0.831, turnover:3.6 },
+        { id:'2',  name:'Shai Gilgeous-Alexander', pos:'G',  age:26, team:'OKC', pts:32.6, reb:5.2,  ast:6.4,  stl:2.0, blk:1.1, fg3m:1.8, fg_pct:0.519, ft_pct:0.893, turnover:2.5 },
+        { id:'3',  name:'Giannis Antetokounmpo',   pos:'F',  age:30, team:'MIL', pts:30.4, reb:11.9, ast:6.3,  stl:1.0, blk:1.2, fg3m:0.8, fg_pct:0.612, ft_pct:0.714, turnover:3.2 },
+        { id:'4',  name:'Anthony Davis',           pos:'C',  age:31, team:'LAL', pts:26.0, reb:12.7, ast:3.5,  stl:1.2, blk:2.3, fg3m:0.7, fg_pct:0.556, ft_pct:0.802, turnover:2.8 },
+        { id:'5',  name:'Luka Doncic',             pos:'G',  age:25, team:'LAL', pts:28.7, reb:8.6,  ast:7.9,  stl:1.4, blk:0.5, fg3m:3.2, fg_pct:0.466, ft_pct:0.788, turnover:4.0 },
+        { id:'6',  name:'Stephen Curry',           pos:'G',  age:36, team:'GSW', pts:26.4, reb:4.3,  ast:6.1,  stl:1.1, blk:0.3, fg3m:5.1, fg_pct:0.454, ft_pct:0.925, turnover:3.1 },
+        { id:'7',  name:'Kevin Durant',            pos:'F',  age:36, team:'PHX', pts:27.1, reb:6.8,  ast:4.5,  stl:0.9, blk:1.2, fg3m:1.8, fg_pct:0.521, ft_pct:0.842, turnover:3.3 },
+        { id:'8',  name:'Joel Embiid',             pos:'C',  age:30, team:'PHI', pts:23.5, reb:8.2,  ast:4.2,  stl:1.0, blk:1.6, fg3m:1.5, fg_pct:0.521, ft_pct:0.864, turnover:3.4 },
+        { id:'9',  name:'LeBron James',            pos:'F',  age:40, team:'LAL', pts:24.5, reb:7.8,  ast:8.2,  stl:1.1, blk:0.6, fg3m:2.1, fg_pct:0.519, ft_pct:0.756, turnover:3.8 },
+        { id:'10', name:'Jayson Tatum',            pos:'F',  age:26, team:'BOS', pts:27.4, reb:8.5,  ast:5.0,  stl:1.0, blk:0.5, fg3m:3.0, fg_pct:0.469, ft_pct:0.831, turnover:3.0 },
+        { id:'11', name:'Devin Booker',            pos:'G',  age:28, team:'PHX', pts:25.8, reb:4.7,  ast:7.1,  stl:1.0, blk:0.5, fg3m:2.4, fg_pct:0.485, ft_pct:0.871, turnover:3.5 },
+        { id:'12', name:'Trae Young',              pos:'G',  age:26, team:'ATL', pts:22.6, reb:3.7,  ast:11.5, stl:1.0, blk:0.2, fg3m:2.2, fg_pct:0.421, ft_pct:0.844, turnover:4.5 },
+        { id:'13', name:'Damian Lillard',          pos:'G',  age:34, team:'MIL', pts:25.1, reb:4.0,  ast:7.7,  stl:0.8, blk:0.4, fg3m:3.7, fg_pct:0.434, ft_pct:0.883, turnover:3.4 },
+        { id:'14', name:'Donovan Mitchell',        pos:'G',  age:28, team:'CLE', pts:24.4, reb:4.7,  ast:6.2,  stl:1.5, blk:0.5, fg3m:2.6, fg_pct:0.454, ft_pct:0.830, turnover:2.8 },
+        { id:'15', name:'Rudy Gobert',             pos:'C',  age:32, team:'MIN', pts:14.2, reb:12.9, ast:1.7,  stl:0.9, blk:2.2, fg3m:0.0, fg_pct:0.654, ft_pct:0.650, turnover:1.5 },
+    ];
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+function init() {
+    // window.PLAYER_DATA is set by data.js (generated by update-stats.js)
+    const raw = window.PLAYER_DATA || null;
+
+    if (!raw) {
+        // No data.js yet — show sample data with a notice
+        document.getElementById('notice').style.display = 'block';
+        allRanked = rankPlayers(getSampleData());
+    } else {
+        // Live data loaded — show timestamp if available
+        if (window.DATA_TIMESTAMP) {
+            document.getElementById('lastUpdated').textContent =
+                'Data: ' + new Date(window.DATA_TIMESTAMP).toLocaleDateString(
+                    'en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+        allRanked = rankPlayers(raw);
+    }
+
+    document.getElementById('content').innerHTML = ''; // clear spinner
+    applyFilters();
+
+    document.getElementById('searchInput').addEventListener('input', applyFilters);
+    document.getElementById('limitFilter').addEventListener('change', function () {
+        displayLimit = parseInt(this.value);
+        applyFilters();
+    });
+    document.getElementById('ageWeight').addEventListener('input', function () {
+        ageFactor = parseInt(this.value) * 0.015;  // 0–10 → 0–0.15
+        applyFilters();
+    });
+    document.getElementById('availWeight').addEventListener('input', function () {
+        availWeight = parseInt(this.value) / 10;   // 0–10 → 0–1.0
+        applyFilters();
+    });
+}
+
+init();
+</script>
+</body>
+</html>

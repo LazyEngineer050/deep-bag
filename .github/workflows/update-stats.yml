@@ -1,0 +1,34 @@
+name: Update NBA Stats
+
+on:
+  schedule:
+    - cron: '0 9 * * *'   # Every day at 9am UTC (5am EST)
+  push:
+    branches: [ main ]    # Also runs on every push, so first deploy gets fresh data
+  workflow_dispatch:       # Allows manual trigger from the GitHub Actions tab
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write      # Needed to commit data.js back to the repo
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch latest NBA stats
+        run: node update-stats.js
+
+      - name: Commit updated data.js
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data.js
+          git diff --staged --quiet || git commit -m "Update NBA stats [$(date -u +%Y-%m-%d)]"
+          git push
