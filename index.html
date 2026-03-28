@@ -365,6 +365,13 @@
                 <div class="slider-ends"><span>Per Game</span><span>TTL Production</span></div>
             </div>
         </div>
+        <div class="slider-group">
+            <label>Scarcity</label>
+            <div class="slider-track">
+                <input type="range" id="scarcityWeight" min="0" max="10" value="0" step="1">
+                <div class="slider-ends"><span>Overall</span><span>Positional</span></div>
+            </div>
+        </div>
         <span class="count-label" id="countLabel"></span>
     </div>
 
@@ -406,9 +413,10 @@ let filtered     = [];
 let sortKey      = 'dynastyZ';
 let sortAsc      = false;
 let displayLimit = 500;
-let ageFactor    = 0.045;  // Age Weight slider  (0–10 → 0–0.15)
-let availWeight  = 0;      // Production slider  (0–10 → 0–1.0)
-const PEAK_AGE   = 27;
+let ageFactor      = 0.045;  // Age Weight slider  (0–10 → 0–0.15)
+let availWeight    = 0;      // Production slider  (0–10 → 0–1.0)
+let scarcityWeight = 0;      // Scarcity slider    (0–10 → 0–1.0)
+const PEAK_AGE     = 27;
 
 // ═══════════════════════════════════════════════════════════════
 //  Z-SCORE ENGINE
@@ -468,6 +476,31 @@ function rankPlayers(raw) {
     });
     pool.forEach(p => {
         p.totalProdZ = CATS.reduce((sum, cat) => sum + (p['tz_' + cat.key] ?? 0), 0);
+    });
+
+    // ── Position-relative Z-scores (G / F / C groups) ────────
+    const posGroups = {};
+    pool.forEach(p => {
+        const g = p.pos?.charAt(0) ?? '?';
+        if (!posGroups[g]) posGroups[g] = [];
+        posGroups[g].push(p);
+    });
+
+    CATS.forEach(cat => {
+        Object.values(posGroups).forEach(group => {
+            const vals = group.map(p => p[cat.key]).filter(v => v != null && !isNaN(v));
+            if (vals.length < 2) return;
+            const mean   = vals.reduce((a, b) => a + b, 0) / vals.length;
+            const stdDev = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length);
+            group.forEach(p => {
+                const v = p[cat.key];
+                const z = (v != null && stdDev > 0) ? (v - mean) / stdDev : 0;
+                p['pz_' + cat.key] = cat.good ? z : -z;
+            });
+        });
+    });
+    pool.forEach(p => {
+        p.posZ = CATS.reduce((sum, cat) => sum + (p['pz_' + cat.key] ?? 0), 0);
     });
 
     pool.sort((a, b) => b.totalZ - a.totalZ);
@@ -546,15 +579,20 @@ function renderTable(players) {
 function calcDynastyZ(p) {
     if (p.totalZ == null) return null;
 
-    // Step 1 — blend per-game and total production
+    // Step 1 — blend per-game and total production (availability slider)
     const baseZ = (availWeight === 0 || p.totalProdZ == null)
         ? p.totalZ
         : (1 - availWeight) * p.totalZ + availWeight * p.totalProdZ;
 
-    // Step 2 — apply age multiplier
-    if (p.age == null) return baseZ;
+    // Step 2 — blend with position-relative Z (scarcity slider)
+    const scarcityZ = (scarcityWeight === 0 || p.posZ == null)
+        ? baseZ
+        : (1 - scarcityWeight) * baseZ + scarcityWeight * p.posZ;
+
+    // Step 3 — apply age multiplier (age slider)
+    if (p.age == null) return scarcityZ;
     const multiplier = Math.max(0.3, Math.min(2.5, 1 + ageFactor * (PEAK_AGE - p.age)));
-    return baseZ * multiplier;
+    return scarcityZ * multiplier;
 }
 
 function applyFilters() {
@@ -639,6 +677,10 @@ function init() {
     });
     document.getElementById('availWeight').addEventListener('input', function () {
         availWeight = parseInt(this.value) / 10;   // 0–10 → 0–1.0
+        applyFilters();
+    });
+    document.getElementById('scarcityWeight').addEventListener('input', function () {
+        scarcityWeight = parseInt(this.value) / 10;  // 0–10 → 0–1.0
         applyFilters();
     });
 }
