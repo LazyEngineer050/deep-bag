@@ -139,6 +139,20 @@
             color: var(--text-dim);
         }
 
+        .heatmap-btn {
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text-dim);
+            font-size: 0.82rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .heatmap-btn:hover { border-color: var(--accent); color: var(--text); }
+        .heatmap-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
         .refresh-btn {
             padding: 7px 14px;
             background: var(--accent-dim);
@@ -402,6 +416,7 @@
                 <div class="slider-ends"><span>Overall</span><span>Positional</span></div>
             </div>
         </div>
+        <button class="heatmap-btn" id="heatmapBtn" onclick="toggleHeatmap()">Heatmap</button>
         <span class="count-label" id="countLabel"></span>
     </div>
 
@@ -446,6 +461,7 @@ let displayLimit = 500;
 let ageFactor      = 0.045;  // Age Weight slider  (0–10 → 0–0.15)
 let availWeight    = 0;      // Production slider  (0–10 → 0–1.0)
 let scarcityWeight = 0;      // Scarcity slider    (0–10 → 0–1.0)
+let heatmap        = false;
 const PEAK_AGE     = 27;
 
 // ═══════════════════════════════════════════════════════════════
@@ -611,7 +627,21 @@ function renderTable(players) {
             <td>${p.team}</td>
             <td>${p.gp  ?? '—'}</td>
             <td>${p.min != null ? p.min.toFixed(1) : '—'}</td>
-            ${CATS.map(cat => `<td>${fmtStat(p[cat.key], cat)}</td>`).join('')}
+            ${CATS.map(cat => {
+                const z = p['z_' + cat.key];
+                let style = '';
+                if (heatmap && z != null) {
+                    const t = Math.max(-1, Math.min(1, z / 2.5)); // clamp to ±2.5σ → ±1
+                    if (t > 0) {
+                        const g = Math.round(80 + 80 * t);
+                        style = ` style="background:rgba(34,${g},94,0.55)"`;
+                    } else {
+                        const r = Math.round(180 + 60 * (-t));
+                        style = ` style="background:rgba(${r},40,40,0.55)"`;
+                    }
+                }
+                return `<td${style}>${fmtStat(p[cat.key], cat)}</td>`;
+            }).join('')}
             <td class="z-total ${zc}">${fmtZ(p.totalZ)}</td>
             <td class="z-total dynasty-col ${p.dynastyZ >= 0 ? 'z-pos' : 'z-neg'}">${fmtZ(p.dynastyZ)}</td>
         </tr>`;
@@ -666,6 +696,12 @@ function handleSort(key) {
     sortAsc = sortKey === key ? !sortAsc : false;
     sortKey = key;
     applyFilters();
+}
+
+function toggleHeatmap() {
+    heatmap = !heatmap;
+    document.getElementById('heatmapBtn').classList.toggle('active', heatmap);
+    renderTable(filtered);
 }
 
 // ═══════════════════════════════════════════════════════════════
