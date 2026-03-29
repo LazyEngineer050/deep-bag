@@ -271,7 +271,7 @@
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 12px;
-            overflow: hidden;
+            /* overflow: hidden removed — needed for position: sticky to work */
         }
 
         .table-scroll { overflow-x: auto; }
@@ -296,7 +296,30 @@
             border-bottom: 1px solid var(--border);
             text-align: right;
             transition: color 0.15s;
+            /* Sticky header row */
+            position: sticky;
+            top: 0;
+            z-index: 2;
         }
+
+        /* Sticky rank + name columns */
+        thead th:nth-child(1), tbody td:nth-child(1) {
+            position: sticky;
+            left: 0;
+            z-index: 1;
+        }
+        thead th:nth-child(2), tbody td:nth-child(2) {
+            position: sticky;
+            left: 38px;   /* width of rank column */
+            z-index: 1;
+        }
+        /* Corner cells need highest z-index (sticky both axes) */
+        thead th:nth-child(1), thead th:nth-child(2) { z-index: 3; }
+
+        /* Solid backgrounds so content doesn't bleed through when scrolling */
+        tbody td:nth-child(1), tbody td:nth-child(2) { background: var(--surface); }
+        tbody tr:hover td:nth-child(1),
+        tbody tr:hover td:nth-child(2) { background: #1f1f38; }
 
         thead th:first-child, thead th:nth-child(2), thead th:nth-child(3) {
             text-align: left;
