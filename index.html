@@ -251,6 +251,27 @@
         tr.my-team-row td:nth-child(1) { border-left: 3px solid var(--accent); }
         tr.my-team-row td:nth-child(2) { color: var(--accent); }
 
+        /* ── Owner column ── */
+        .owner-fa   { color: var(--text-dim); font-size: 0.75rem; }
+        .owner-mine { color: var(--accent);   font-weight: 600; }
+        .owner-taken{ color: var(--text-dim); font-size: 0.75rem; }
+
+        /* ── File upload area ── */
+        .file-upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+        .file-upload-area:hover { border-color: var(--accent); }
+        .file-upload-area input { display: none; }
+        .file-upload-area p { font-size: 0.82rem; color: var(--text-dim); margin-top: 6px; }
+        .team-select-row { display: flex; align-items: center; gap: 10px; }
+        .team-select-row label { font-size: 0.82rem; color: var(--text-dim); white-space: nowrap; }
+        .team-select-row select { flex: 1; }
+
         .refresh-btn {
             padding: 7px 14px;
             background: var(--accent-dim);
@@ -543,6 +564,7 @@
         </div>
         <button class="heatmap-btn" id="heatmapBtn" onclick="toggleHeatmap()">Heatmap</button>
         <button class="heatmap-btn" id="myTeamBtn" onclick="openTeamModal()">My Team</button>
+        <button class="heatmap-btn" id="faOnlyBtn" onclick="toggleFaOnly()" style="display:none">FA Only</button>
         <span class="count-label" id="countLabel"></span>
     </div>
 
@@ -574,14 +596,22 @@
 <!-- My Team import modal -->
 <div class="modal-overlay" id="teamModal" onclick="if(event.target===this)closeTeamModal()">
     <div class="modal">
-        <h2>Import My Team from Fantrax</h2>
-        <p>Export your roster from Fantrax (My Team → Export), then paste the CSV here. Or just paste player names, one per line.</p>
-        <textarea id="teamPaste" placeholder="Nikola Jokic&#10;Shai Gilgeous-Alexander&#10;..."></textarea>
+        <h2>Import Fantrax League</h2>
+        <p>In Fantrax, go to the <strong>Players</strong> tab, then click the download/export icon to get the CSV. Upload it here.</p>
+        <div class="file-upload-area" onclick="document.getElementById('teamFile').click()">
+            <input type="file" id="teamFile" accept=".csv" onchange="handleFantraxFile(event)">
+            <div id="fileLabel">📂 Click to choose CSV file</div>
+            <p id="fileHint">Fantrax-Players-*.csv</p>
+        </div>
+        <div class="team-select-row" id="teamSelectRow" style="display:none">
+            <label>Your team:</label>
+            <select id="teamNameSelect"></select>
+        </div>
         <div class="modal-status" id="teamStatus"></div>
         <div class="modal-actions">
             <button onclick="clearTeam()">Clear</button>
             <button onclick="closeTeamModal()">Cancel</button>
-            <button class="btn-primary" onclick="importTeam()">Import</button>
+            <button class="btn-primary" id="teamApplyBtn" onclick="applyFantraxImport()" style="display:none">Apply</button>
         </div>
     </div>
 </div>
@@ -702,9 +732,16 @@ function rankPlayers(raw) {
     });
 
     // ── Position-relative Z-scores (G / F / C groups) ────────
+    // Apply Fantrax positions when available (overrides ESPN)
+    pool.forEach(p => {
+        const ld = leagueData.get(normName(p.name));
+        if (ld?.fantaxPos) p.pos = ld.fantaxPos;
+    });
+
+    // Group by G/F/C — last char handles both ESPN ('G') and Fantrax ('PG','SG','SF','PF','C')
     const posGroups = {};
     pool.forEach(p => {
-        const g = p.pos?.charAt(0) ?? '?';
+        const g = p.pos ? p.pos.slice(-1) : '?';
         if (!posGroups[g]) posGroups[g] = [];
         posGroups[g].push(p);
     });
@@ -757,6 +794,7 @@ function renderTable(players) {
         { label: 'Pos',     sortK: 'pos',    title: 'Position' },
         { label: 'Age',     sortK: 'age',    title: 'Age' },
         { label: 'Team',    sortK: 'team',   title: 'Team' },
+        ...(leagueData.size > 0 ? [{ label: 'Owner', sortK: 'owner', title: 'Fantasy team owner' }] : []),
         { label: 'GP',      sortK: 'gp',     title: 'Games played' },
         { label: 'MIN',     sortK: 'min',    title: 'Minutes per game' },
         ...CATS.map(c => ({ label: c.label, sortK: c.key, title: c.title })),
@@ -784,6 +822,12 @@ function renderTable(players) {
             <td>${p.pos ?? '—'}</td>
             <td>${p.age != null ? p.age.toFixed(1) : '—'}</td>
             <td>${p.team}</td>
+            ${leagueData.size > 0 ? (() => {
+                const ld = leagueData.get(normName(p.name));
+                const owner = ld?.owner ?? '—';
+                const cls = owner === myTeamName ? 'owner-mine' : owner === 'FA' ? 'owner-fa' : 'owner-taken';
+                return `<td class="${cls}">${owner}</td>`;
+            })() : ''}
             <td>${p.gp  ?? '—'}</td>
             <td>${p.min != null ? p.min.toFixed(1) : '—'}</td>
             ${CATS.map(cat => {
@@ -837,6 +881,14 @@ function applyFilters() {
     const q = document.getElementById('searchInput').value.toLowerCase().trim();
     filtered = q ? allRanked.filter(p => p.name.toLowerCase().includes(q)) : [...allRanked];
 
+    // FA Only: hide players owned by other teams (keep mine + free agents)
+    if (faOnly && leagueData.size > 0) {
+        filtered = filtered.filter(p => {
+            const owner = leagueData.get(normName(p.name))?.owner ?? 'FA';
+            return owner === 'FA' || owner === myTeamName;
+        });
+    }
+
     // Recalculate dynasty Z with current slider value
     filtered.forEach(p => { p.dynastyZ = calcDynastyZ(p); });
 
@@ -863,12 +915,33 @@ function toggleHeatmap() {
     renderTable(filtered);
 }
 
-// ── My Team ────────────────────────────────────────────────────
-let myTeam        = new Set(); // normalized player names on roster
-let myTeamOnly    = false;     // filter to only show team
+// ── My Team / League Import ─────────────────────────────────────
+let myTeam        = new Set(); // normNames of my rostered players
+let leagueData    = new Map(); // normName → { owner, fantaxPos }
+let myTeamName    = '';
+let faOnly        = false;
+let _parsedRows   = [];        // holds parsed CSV rows until Apply is clicked
 
 function normName(n) {
     return n.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function parseCSVText(text) {
+    const rows = [];
+    for (const line of text.split(/\r?\n/)) {
+        if (!line.trim()) continue;
+        const cells = [];
+        let cur = '', inQ = false;
+        for (let i = 0; i < line.length; i++) {
+            const c = line[i];
+            if (c === '"') { inQ = !inQ; }
+            else if (c === ',' && !inQ) { cells.push(cur.trim()); cur = ''; }
+            else cur += c;
+        }
+        cells.push(cur.trim());
+        rows.push(cells);
+    }
+    return rows;
 }
 
 function openTeamModal() {
@@ -879,64 +952,90 @@ function closeTeamModal() {
     document.getElementById('teamModal').classList.remove('open');
 }
 
-function importTeam() {
-    const raw = document.getElementById('teamPaste').value.trim();
-    if (!raw) return;
-
-    // Try to parse as CSV: look for a column whose header matches "name" or "player"
-    const lines = raw.split(/\r?\n/).filter(l => l.trim());
-    const names = [];
-
-    if (lines[0].includes(',')) {
-        // CSV — find the name column index
-        const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim().toLowerCase());
-        const col = headers.findIndex(h => h === 'name' || h === 'player' || h === 'player name');
-        const idx = col >= 0 ? col : 0; // fallback to first column
-        for (let i = 1; i < lines.length; i++) {
-            const cells = lines[i].split(',');
-            const val = cells[idx]?.replace(/"/g,'').trim();
-            if (val) names.push(val);
+function handleFantraxFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    document.getElementById('fileLabel').textContent = '⏳ Reading…';
+    const reader = new FileReader();
+    reader.onload = e => {
+        _parsedRows = parseCSVText(e.target.result);
+        const header = _parsedRows[0].map(h => h.toLowerCase());
+        const playerIdx = header.indexOf('player');
+        const statusIdx = header.indexOf('status');
+        if (playerIdx < 0 || statusIdx < 0) {
+            document.getElementById('teamStatus').textContent = 'Could not find Player or Status columns. Make sure this is a Fantrax Players export.';
+            document.getElementById('fileLabel').textContent = '📂 Click to choose CSV file';
+            return;
         }
-    } else {
-        // Plain list — one name per line
-        lines.forEach(l => { const v = l.trim(); if (v) names.push(v); });
-    }
+        // Collect team names (non-FA statuses)
+        const teams = new Set();
+        _parsedRows.slice(1).forEach(r => { const s = r[statusIdx]; if (s && s !== 'FA') teams.add(s); });
 
-    // Match names against player data
-    const playerNames = allRanked.map(p => ({ norm: normName(p.name), orig: p.name }));
-    const matched = [], unmatched = [];
-    names.forEach(name => {
-        const n = normName(name);
-        const hit = playerNames.find(p => p.norm === n);
-        if (hit) matched.push(hit.orig);
-        else unmatched.push(name);
+        const sel = document.getElementById('teamNameSelect');
+        sel.innerHTML = [...teams].sort().map(t => `<option value="${t}">${t}</option>`).join('');
+
+        document.getElementById('fileLabel').textContent = `✓ ${file.name}`;
+        document.getElementById('fileHint').textContent  = `${_parsedRows.length - 1} players · ${teams.size} teams`;
+        document.getElementById('teamSelectRow').style.display = 'flex';
+        document.getElementById('teamApplyBtn').style.display  = '';
+        document.getElementById('teamStatus').textContent = 'Select your team name and click Apply.';
+    };
+    reader.readAsText(file);
+}
+
+function applyFantraxImport() {
+    myTeamName = document.getElementById('teamNameSelect').value;
+    const header = _parsedRows[0].map(h => h.toLowerCase());
+    const playerIdx = header.indexOf('player');
+    const statusIdx = header.indexOf('status');
+    const posIdx    = header.indexOf('position');
+
+    leagueData.clear();
+    _parsedRows.slice(1).forEach(r => {
+        const name = r[playerIdx];
+        if (!name) return;
+        const owner     = r[statusIdx] || 'FA';
+        const fantaxPos = posIdx >= 0 ? r[posIdx].split(',')[0] : null;
+        leagueData.set(normName(name), { owner, fantaxPos });
     });
 
-    myTeam = new Set(matched.map(n => normName(n)));
+    myTeam = new Set([...leagueData.entries()]
+        .filter(([, v]) => v.owner === myTeamName)
+        .map(([k]) => k));
 
     const btn = document.getElementById('myTeamBtn');
-    if (myTeam.size > 0) {
-        btn.classList.add('active');
-        btn.textContent = `My Team (${myTeam.size})`;
-    }
+    btn.classList.add('active');
+    btn.textContent = `My Team (${myTeam.size})`;
+    document.getElementById('faOnlyBtn').style.display = '';
 
-    let status = `Matched ${matched.length} of ${names.length} players.`;
-    if (unmatched.length) status += ` Not found: ${unmatched.slice(0,5).join(', ')}${unmatched.length > 5 ? '…' : ''}`;
-    document.getElementById('teamStatus').textContent = status;
+    rerank(); // rerank so Fantrax positions take effect
+    closeTeamModal();
+}
 
+function toggleFaOnly() {
+    faOnly = !faOnly;
+    document.getElementById('faOnlyBtn').classList.toggle('active', faOnly);
     applyFilters();
-    if (matched.length > 0) setTimeout(closeTeamModal, 1200);
 }
 
 function clearTeam() {
     myTeam.clear();
-    myTeamOnly = false;
-    document.getElementById('teamPaste').value = '';
+    leagueData.clear();
+    myTeamName = '';
+    faOnly     = false;
+    _parsedRows = [];
+    document.getElementById('teamFile').value       = '';
+    document.getElementById('fileLabel').textContent = '📂 Click to choose CSV file';
+    document.getElementById('fileHint').textContent  = 'Fantrax-Players-*.csv';
+    document.getElementById('teamSelectRow').style.display = 'none';
+    document.getElementById('teamApplyBtn').style.display  = 'none';
     document.getElementById('teamStatus').textContent = '';
     const btn = document.getElementById('myTeamBtn');
     btn.classList.remove('active');
     btn.textContent = 'My Team';
-    applyFilters();
+    document.getElementById('faOnlyBtn').style.display = 'none';
+    document.getElementById('faOnlyBtn').classList.remove('active');
+    rerank();
     closeTeamModal();
 }
 
