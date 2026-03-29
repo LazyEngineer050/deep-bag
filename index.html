@@ -274,7 +274,11 @@
             /* overflow: hidden removed — needed for position: sticky to work */
         }
 
-        .table-scroll { overflow-x: auto; }
+        .table-scroll {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: calc(100vh - 240px);
+        }
 
         table {
             width: 100%;
