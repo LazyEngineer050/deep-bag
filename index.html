@@ -193,6 +193,58 @@
         .heatmap-btn:hover { border-color: var(--accent); color: var(--text); }
         .heatmap-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
 
+        /* ── Slider tooltips ── */
+        .slider-group { position: relative; }
+        .tip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            border: 1px solid var(--text-dim);
+            color: var(--text-dim);
+            font-size: 0.6rem;
+            font-weight: 700;
+            cursor: help;
+            margin-left: 5px;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .tip .tip-box {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 10px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            width: 280px;
+            z-index: 50;
+            font-size: 0.75rem;
+            font-weight: 400;
+            color: var(--text);
+            line-height: 1.6;
+            text-transform: none;
+            letter-spacing: 0;
+            pointer-events: none;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        .tip .tip-box strong { color: var(--accent); display: block; margin-bottom: 4px; }
+        .tip .tip-box code {
+            display: block;
+            margin: 6px 0 4px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 5px;
+            padding: 5px 8px;
+            font-family: monospace;
+            font-size: 0.7rem;
+            color: #a5b4fc;
+        }
+        .tip:hover .tip-box { display: block; }
+
         /* ── My Team modal ── */
         .modal-overlay {
             display: none;
@@ -542,21 +594,21 @@
             <option value="9999">All</option>
         </select>
         <div class="slider-group">
-            <label>Age Weight</label>
+            <label>Age Weight<span class="tip">?<span class="tip-box"><strong>Age Weight</strong>Multiplies each player's Z-score by an age factor. Peak age is 27 — younger players get a bonus, older players a penalty. Use this to prioritize long-term dynasty value over current production.<code>Dynasty Z = Z × clamp(1 + factor × (27 − age), 0.3, 2.5)</code>At max: a 21-year-old scores ~90% higher; a 35-year-old scores ~70% lower.</span></span></label>
             <div class="slider-track">
                 <input type="range" id="ageWeight" min="0" max="10" value="3" step="1">
                 <div class="slider-ends"><span>Current</span><span>Dynasty</span></div>
             </div>
         </div>
         <div class="slider-group">
-            <label>Availability</label>
+            <label>Availability<span class="tip">?<span class="tip-box"><strong>Availability</strong>Blends per-game stats with total season production. Rewards players who stay healthy and play more games — a player averaging 20 pts in 70 games contributes more than one averaging 22 pts in 40 games.<code>Blend = (1 − w) × Per-Game Z + w × Total Z</code>Total Z is computed by multiplying each counting stat by games played before re-ranking.</span></span></label>
             <div class="slider-track">
                 <input type="range" id="availWeight" min="0" max="10" value="0" step="1">
                 <div class="slider-ends"><span>Per Game</span><span>TTL Production</span></div>
             </div>
         </div>
         <div class="slider-group">
-            <label>Scarcity</label>
+            <label>Scarcity<span class="tip">?<span class="tip-box"><strong>Positional Scarcity</strong>Blends overall rankings with position-relative rankings. Rewards players who are elite compared to others at their position — e.g. a guard averaging 2 blocks is far rarer than a center doing the same.<code>Scarcity Z = (1 − w) × Overall Z + w × Position Z</code>Position Z is calculated within G / F / C groups independently.</span></span></label>
             <div class="slider-track">
                 <input type="range" id="scarcityWeight" min="0" max="10" value="0" step="1">
                 <div class="slider-ends"><span>Overall</span><span>Positional</span></div>
