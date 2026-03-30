@@ -1133,6 +1133,15 @@ function applyFantraxImport() {
         .filter(([, v]) => v.owner === myTeamName)
         .map(([k]) => k));
 
+    // Apply Fantrax positions directly to rawData so they persist across rerenders
+    rawData.forEach(p => {
+        const ld = leagueData.get(normName(p.name));
+        if (ld?.fantaxPos) {
+            if (p._espnPos === undefined) p._espnPos = p.pos; // save original for restore
+            p.pos = ld.fantaxPos;
+        }
+    });
+
     const btn = document.getElementById('myTeamBtn');
     btn.classList.add('active');
     btn.textContent = `My Team (${myTeam.size})`;
@@ -1149,6 +1158,8 @@ function toggleFaOnly() {
 }
 
 function clearTeam() {
+    // Restore original ESPN positions on rawData
+    rawData.forEach(p => { if (p._espnPos !== undefined) p.pos = p._espnPos; });
     myTeam.clear();
     leagueData.clear();
     myTeamName = '';
