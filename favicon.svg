@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- bag body -->
+  <ellipse cx="16" cy="22" rx="11" ry="9" fill="#f97316"/>
+  <!-- bag neck -->
+  <rect x="13" y="12" width="6" height="6" rx="2" fill="#f97316"/>
+  <!-- knot -->
+  <ellipse cx="16" cy="12" rx="5" ry="3" fill="#c2560a"/>
+  <!-- subtle shine -->
+  <ellipse cx="12.5" cy="19" rx="2.5" ry="2" fill="rgba(255,255,255,0.18)"/>
+  <!-- dollar sign -->
+  <text x="16" y="27" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="11" font-weight="900" fill="#1a1a2e">$</text>
+</svg>
