@@ -29,6 +29,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data.js
+          git add data.js news.js
           git diff --staged --quiet || git commit -m "Update NBA stats [$(date -u +%Y-%m-%d)]"
           git push
