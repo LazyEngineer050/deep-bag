@@ -931,7 +931,7 @@ function renderTable(players) {
                 const cls = owner === myTeamName ? 'owner-mine' : owner === 'FA' ? 'owner-fa' : 'owner-taken';
                 return `<td class="${cls}">${owner}</td>`;
             })() : ''}
-            <td>${p.gp  ?? '—'}</td>
+            <td>${p.gp ?? 0}</td>
             <td>${p.min != null ? p.min.toFixed(1) : '—'}</td>
             ${CATS.map(cat => {
                 const z = p['z_' + cat.key];
@@ -985,7 +985,7 @@ function applyFilters() {
     filtered = q ? allRanked.filter(p => p.name.toLowerCase().includes(q)) : [...allRanked];
 
     // Min GP filter
-    if (minGP > 0) filtered = filtered.filter(p => p.gp == null || p.gp >= minGP);
+    if (minGP > 0) filtered = filtered.filter(p => (p.gp ?? 0) >= minGP);
 
     // FA Only: hide players owned by other teams (keep mine + free agents)
     if (faOnly && leagueData.size > 0) {
