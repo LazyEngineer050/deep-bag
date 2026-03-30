@@ -307,8 +307,9 @@
         .owner-fa   { color: var(--text-dim); font-size: 0.75rem; }
         .owner-mine { color: var(--accent);   font-weight: 600; }
         .player-name-news { font-weight: 600; }
-        .news-text  { font-size: 0.78rem; color: var(--text-dim); line-height: 1.4; display: inline-block; max-width: 680px; padding: 2px 0 4px; }
+        .news-text  { font-size: 0.78rem; color: var(--text-dim); line-height: 1.4; display: block; white-space: normal; padding: 2px 0 4px; }
         .news-none  { font-style: italic; opacity: 0.45; }
+        .news-player-cell { white-space: normal; width: 100%; }
         .owner-taken{ color: var(--text-dim); font-size: 0.75rem; }
 
         /* ── File upload area ── */
@@ -876,7 +877,7 @@ function renderTable(players) {
             const newsText = playerNews[p.name] ?? '';
             return `<tr class="${tc}">
                 <td class="${rc}">${rank}</td>
-                <td><span class="player-name-news">${p.name}</span>${newsText
+                <td class="news-player-cell"><span class="player-name-news">${p.name}</span>${newsText
                     ? `<br><span class="news-text">${newsText}</span>`
                     : '<br><span class="news-text news-none">No recent news</span>'}</td>
                 <td class="z-total dynasty-col ${p.dynastyZ >= 0 ? 'z-pos' : 'z-neg'}">${fmtZ(p.dynastyZ)}</td>
