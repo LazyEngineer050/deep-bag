@@ -92,17 +92,18 @@ async function fetchAthleteVolume(id) {
             'sports.core.api.espn.com',
             `/v2/sports/basketball/leagues/nba/seasons/2026/types/2/athletes/${id}/statistics/0`
         );
-        let fgm = null, ftm = null;
+        let fgm = null, ftm = null, gp = null;
         for (const cat of data.splits?.categories ?? []) {
             for (const s of cat.stats ?? []) {
                 if (s.name === 'avgFieldGoalsMade')   fgm = s.value;
                 if (s.name === 'avgFreeThrowsMade')   ftm = s.value;
+                if (s.name === 'gamesPlayed')         gp  = s.value;
                 if (s.name === 'fieldGoalsMade' && fgm === null) fgm = s.value; // fallback total
             }
         }
-        return { id, fgm, ftm };
+        return { id, fgm, ftm, gp };
     } catch {
-        return { id, fgm: null, ftm: null };
+        return { id, fgm: null, ftm: null, gp: null };
     }
 }
 
@@ -196,7 +197,7 @@ async function main() {
         const batch = rosterIds.slice(i, i + BATCH);
         log(`Fetching volume stats... (${Math.min(i + BATCH, rosterIds.length)}/${rosterIds.length})`);
         const results = await Promise.all(batch.map(fetchAthleteVolume));
-        results.forEach(r => { volumeMap[r.id] = { fgm: r.fgm, ftm: r.ftm }; });
+        results.forEach(r => { volumeMap[r.id] = { fgm: r.fgm, ftm: r.ftm, gp: r.gp }; });
         if (i + BATCH < rosterIds.length) await sleep(150);
     }
     console.log(`\nLoaded volume stats for ${Object.keys(volumeMap).length} players.`);
@@ -213,7 +214,7 @@ async function main() {
             age:      info.age  ?? null,
             pos:      info.pos  ?? '—',
             hasStats,
-            gp:       (stats.pts && stats.totalPts) ? Math.round(stats.totalPts / stats.pts) : null,
+            gp:       volume.gp ?? ((stats.pts && stats.totalPts) ? Math.round(stats.totalPts / stats.pts) : null),
             min:      stats.min      ?? null,
             pts:      stats.pts      ?? null,
             reb:      stats.reb      ?? null,
