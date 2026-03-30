@@ -869,8 +869,8 @@ function renderTable(players) {
         }).join('') + '</tr></thead>';
 
         const slice2 = players.slice(0, displayLimit);
-        const tbody2 = '<tbody>' + slice2.map((p, i) => {
-            const rank = i + 1;
+        const tbody2 = '<tbody>' + slice2.map((p) => {
+            const rank = p.dynastyRank ?? '—';
             const rc   = rank === 1 ? 'rank-gold' : rank === 2 ? 'rank-silver' : rank === 3 ? 'rank-bronze' : '';
             const tc   = myTeam.size > 0 && myTeam.has(normName(p.name)) ? ' my-team-row' : '';
             const newsText = playerNews[p.name] ?? '';
@@ -912,8 +912,8 @@ function renderTable(players) {
     }).join('') + '</tr></thead>';
 
     const slice = players.slice(0, displayLimit);
-    const tbody = '<tbody>' + slice.map((p, i) => {
-        const rank = i + 1;
+    const tbody = '<tbody>' + slice.map((p) => {
+        const rank = p.dynastyRank ?? '—';
         const rc   = rank === 1 ? 'rank-gold' : rank === 2 ? 'rank-silver' : rank === 3 ? 'rank-bronze' : '';
         const zc   = p.totalZ >= 0 ? 'z-pos' : 'z-neg';
         const tc   = myTeam.size > 0 && myTeam.has(normName(p.name)) ? ' my-team-row' : '';
@@ -993,8 +993,10 @@ function applyFilters() {
         });
     }
 
-    // Recalculate dynasty Z with current slider value
-    filtered.forEach(p => { p.dynastyZ = calcDynastyZ(p); });
+    // Recalculate dynasty Z for ALL players, then assign persistent ranks
+    allRanked.forEach(p => { p.dynastyZ = calcDynastyZ(p); });
+    const _byDynasty = [...allRanked].sort((a, b) => (b.dynastyZ ?? -Infinity) - (a.dynastyZ ?? -Infinity));
+    _byDynasty.forEach((p, i) => { p.dynastyRank = p.dynastyZ != null ? i + 1 : null; });
 
     filtered.sort((a, b) => {
         let av = a[sortKey], bv = b[sortKey];
