@@ -92,6 +92,14 @@ PTS, REB, AST, STL, BLK, 3PM, FG%, FT%, TO
 - Position field is quoted and may contain commas e.g. "PG,SG,G" — use the quoted CSV parser
 - Currently only uses first position from the list (multi-position support is a backlog item)
 
+## Backlog
+- **Multi-position support** — Fantrax CSV import currently only uses the first position from the list; support all positions (e.g. "PG,SG,G")
+- **Matchup analyzer** — After importing a Fantrax CSV, user selects an opponent team. The tool shows a head-to-head category breakdown (my team vs. theirs), recommends a strategic focus (e.g. "concede TO, attack BLK/STL"), and generates an optimal day-by-day lineup for the week that maximizes the projected category wins given each player's scheduled games. Requires knowing which players are on the opponent's roster (available from `leagueData`) and each player's remaining game schedule for the week (ESPN schedule API).
+- **Free agent schedule analysis** — When browsing free agents, surface each player's upcoming game count for the current/next week so the user can prioritize pickups based on schedule density, not just season averages.
+- **Win/win trade finder** — Analyze all other teams' rosters to infer their likely punt categories (categories where their roster is systematically weak), then identify trades where the user gives away excess in a punted category and receives back in a targeted one — flagging deals that are net positive for both sides.
+- **Pay/free tier** — Gate advanced features (e.g. matchup analyzer, trade finder) behind a paid tier; keep core rankings and stats free.
+- **Multi-platform league import** — Currently supports Fantrax CSV only. Add ingestion of roster/ownership data from other major fantasy platforms (ESPN, Yahoo, etc.) so users on those platforms can use all league-aware features (matchup analyzer, trade finder, FA filter, etc.).
+
 ## User
 - Complete beginner, non-technical. Build autonomously and explain what was done in plain English.
 - Commit and push after every meaningful change — don't leave things in a half-deployed state.

@@ -592,6 +592,11 @@
 
     <div class="controls">
         <input type="text" id="searchInput" placeholder="Search player…">
+        <select id="seasonSelect">
+            <option value="current">2025-26</option>
+            <option value="2025">2024-25</option>
+            <option value="2024">2023-24</option>
+        </select>
         <select id="limitFilter">
             <option value="100">Top 100</option>
             <option value="250">Top 250</option>
@@ -714,6 +719,7 @@ let newsMode       = false;
 let minGP          = 5;
 let enabledCats    = new Set(CATS.map(c => c.key));
 let rawData        = null;
+let activeSeason   = 'current';
 const PEAK_AGE     = 27;
 
 // ═══════════════════════════════════════════════════════════════
@@ -734,8 +740,17 @@ function zScores(pool, valFn, cat) {
 }
 
 function rankPlayers(raw) {
-    const pool    = raw.filter(p => p.hasStats).map(p => ({ ...p }));
-    const noStats = raw.filter(p => !p.hasStats).map(p => ({ ...p, totalZ: null, totalProdZ: null }));
+    const getSeasonData = p => {
+        if (activeSeason === 'current') return p;
+        const h = p.hist?.[activeSeason];
+        if (!h) return { ...p, hasStats: false };
+        const yearOffset = activeSeason === '2025' ? 1 : 2;
+        return { ...p, ...h, age: p.age != null ? p.age - yearOffset : null, fgm: null, ftm: null };
+    };
+
+    const all     = raw.map(getSeasonData);
+    const pool    = all.filter(p => p.hasStats).map(p => ({ ...p }));
+    const noStats = all.filter(p => !p.hasStats).map(p => ({ ...p, totalZ: null, totalProdZ: null }));
 
     // ── FG%/FT% impact: (player% − leagueAvg%) × makes/game ──
     // Falls back to raw % if volume data (fgm/ftm) is unavailable.
@@ -1243,6 +1258,10 @@ function init() {
     document.getElementById('content').innerHTML = ''; // clear spinner
     applyFilters();
 
+    document.getElementById('seasonSelect').addEventListener('change', function () {
+        activeSeason = this.value;
+        rerank();
+    });
     document.getElementById('searchInput').addEventListener('input', applyFilters);
     document.getElementById('limitFilter').addEventListener('change', function () {
         displayLimit = parseInt(this.value);

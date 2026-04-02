@@ -86,11 +86,11 @@ async function fetchRoster(teamId) {
 }
 
 // ── 3. fetch FGM/game and FTM/game for one athlete ────────────────────────
-async function fetchAthleteVolume(id) {
+async function fetchAthleteVolume(id, season) {
     try {
         const data = await get(
             'sports.core.api.espn.com',
-            `/v2/sports/basketball/leagues/nba/seasons/2026/types/2/athletes/${id}/statistics/0`
+            `/v2/sports/basketball/leagues/nba/seasons/${season}/types/2/athletes/${id}/statistics/0`
         );
         let fgm = null, ftm = null, gp = null;
         for (const cat of data.splits?.categories ?? []) {
@@ -108,11 +108,11 @@ async function fetchAthleteVolume(id) {
 }
 
 // ── 4. fetch all player stats via leaders endpoint ────────────────────────
-async function fetchStats() {
-    log('Fetching league stats...');
+async function fetchStats(season) {
+    log(`Fetching ${season} stats...`);
     const data = await get(
         'sports.core.api.espn.com',
-        '/v2/sports/basketball/leagues/nba/seasons/2026/types/2/leaders?limit=500'
+        `/v2/sports/basketball/leagues/nba/seasons/${season}/types/2/leaders?limit=500`
     );
 
     // Map ESPN category names → our internal keys
@@ -184,8 +184,11 @@ async function main() {
     }
     console.log(`\nLoaded ${Object.keys(playerMap).length} players.`);
 
-    // Stats
-    const statsById = await fetchStats();
+    const CURRENT_SEASON = '2026';
+    const HIST_SEASONS   = ['2025', '2024'];
+
+    // Stats — current season
+    const statsById = await fetchStats(CURRENT_SEASON);
     console.log(`\nReceived stats for ${Object.keys(statsById).length} players.`);
 
     // Volume stats (FGM/game, FTM/game) — only for rostered players who have stats
@@ -196,7 +199,7 @@ async function main() {
     for (let i = 0; i < rosterIds.length; i += BATCH) {
         const batch = rosterIds.slice(i, i + BATCH);
         log(`Fetching volume stats... (${Math.min(i + BATCH, rosterIds.length)}/${rosterIds.length})`);
-        const results = await Promise.all(batch.map(fetchAthleteVolume));
+        const results = await Promise.all(batch.map(id => fetchAthleteVolume(id, CURRENT_SEASON)));
         results.forEach(r => { volumeMap[r.id] = { fgm: r.fgm, ftm: r.ftm, gp: r.gp }; });
         if (i + BATCH < rosterIds.length) await sleep(150);
     }
@@ -228,6 +231,37 @@ async function main() {
             fgm:      volume.fgm     ?? null,
             ftm:      volume.ftm     ?? null,
         };
+    });
+
+    // Stats — historical seasons (leaders only, no per-athlete volume calls)
+    const histStatsById = {};
+    for (const season of HIST_SEASONS) {
+        histStatsById[season] = await fetchStats(season);
+        console.log(`\nReceived ${season} stats for ${Object.keys(histStatsById[season]).length} players.`);
+    }
+
+    // Attach historical stats to each player
+    players.forEach(p => {
+        p.hist = {};
+        for (const season of HIST_SEASONS) {
+            const s = histStatsById[season][p.id];
+            if (!s) continue;
+            const gp = (s.pts && s.totalPts) ? Math.round(s.totalPts / s.pts) : null;
+            p.hist[season] = {
+                hasStats:  true,
+                gp:        gp,
+                min:       s.min      ?? null,
+                pts:       s.pts      ?? null,
+                reb:       s.reb      ?? null,
+                ast:       s.ast      ?? null,
+                stl:       s.stl      ?? null,
+                blk:       s.blk      ?? null,
+                fg3m:      s.fg3m     ?? null,
+                fg_pct:    s.fg_pct   != null ? s.fg_pct / 100 : null,
+                ft_pct:    s.ft_pct   != null ? s.ft_pct / 100 : null,
+                turnover:  s.turnover ?? null,
+            };
+        }
     });
 
     // Write data.js
