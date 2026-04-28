@@ -93,12 +93,14 @@ PTS, REB, AST, STL, BLK, 3PM, FG%, FT%, TO
 - Currently only uses first position from the list (multi-position support is a backlog item)
 
 ## Backlog
-- **Multi-position support** — Fantrax CSV import currently only uses the first position from the list; support all positions (e.g. "PG,SG,G")
-- **Matchup analyzer** — After importing a Fantrax CSV, user selects an opponent team. The tool shows a head-to-head category breakdown (my team vs. theirs), recommends a strategic focus (e.g. "concede TO, attack BLK/STL"), and generates an optimal day-by-day lineup for the week that maximizes the projected category wins given each player's scheduled games. Requires knowing which players are on the opponent's roster (available from `leagueData`) and each player's remaining game schedule for the week (ESPN schedule API).
-- **Free agent schedule analysis** — When browsing free agents, surface each player's upcoming game count for the current/next week so the user can prioritize pickups based on schedule density, not just season averages.
-- **Win/win trade finder** — Analyze all other teams' rosters to infer their likely punt categories (categories where their roster is systematically weak), then identify trades where the user gives away excess in a punted category and receives back in a targeted one — flagging deals that are net positive for both sides.
-- **Pay/free tier** — Gate advanced features (e.g. matchup analyzer, trade finder) behind a paid tier; keep core rankings and stats free.
-- **Multi-platform league import** — Currently supports Fantrax CSV only. Add ingestion of roster/ownership data from other major fantasy platforms (ESPN, Yahoo, etc.) so users on those platforms can use all league-aware features (matchup analyzer, trade finder, FA filter, etc.).
+1. **Slider-weighted category Z-scores** — Currently the age, availability, and scarcity sliders only affect Dynasty Z. Adjust the individual category Z-score columns (and the base Z-Score total) to also reflect the slider weightings, so the whole table is consistent with the displayed Dynasty Z.
+2. **Recent-form bias** — Add a slider or toggle to weight rankings toward the last 7, 14, 30, or 60 days of stats instead of the full season. Requires fetching shorter time-window stats from ESPN (the athlete stats endpoint may support date-range params, or use the game log endpoint to aggregate recent games).
+3. **Free agent schedule analysis** — When browsing free agents, surface each player's upcoming game count for the current/next week so the user can prioritize pickups based on schedule density, not just season averages.
+4. **Multi-position support** — Fantrax CSV import currently only uses the first position from the list; support all positions (e.g. "PG,SG,G")
+5. **Matchup analyzer** — After importing a Fantrax CSV, user selects an opponent team. The tool shows a head-to-head category breakdown (my team vs. theirs), recommends a strategic focus (e.g. "concede TO, attack BLK/STL"), and generates an optimal day-by-day lineup for the week that maximizes the projected category wins given each player's scheduled games. Requires knowing which players are on the opponent's roster (available from `leagueData`) and each player's remaining game schedule for the week (ESPN schedule API).
+6. **Win/win trade finder** — Analyze all other teams' rosters to infer their likely punt categories (categories where their roster is systematically weak), then identify trades where the user gives away excess in a punted category and receives back in a targeted one — flagging deals that are net positive for both sides.
+7. **Multi-platform league import** — Currently supports Fantrax CSV only. Add ingestion of roster/ownership data from other major fantasy platforms (ESPN, Yahoo, etc.) so users on those platforms can use all league-aware features (matchup analyzer, trade finder, FA filter, etc.).
+8. **Pay/free tier** — Gate advanced features (e.g. matchup analyzer, trade finder) behind a paid tier; keep core rankings and stats free.
 
 ## User
 - Complete beginner, non-technical. Build autonomously and explain what was done in plain English.
